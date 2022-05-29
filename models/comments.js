@@ -10,4 +10,8 @@ const commentsSchema = mongoose.Schema(
   { timestamps: true }
 );
 
+commentsSchema.methods.addCommentForSolution = async (solution, commentId) => {
+  solution.com;
+};
+
 export default mongoose.model("Comments", commentsSchema);

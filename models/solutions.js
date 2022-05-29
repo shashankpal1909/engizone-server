@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
-import questions from "./questions.js";
+
+import Comments from "./comments.js";
 
 const solutionSchema = mongoose.Schema(
   {
@@ -14,16 +15,16 @@ const solutionSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-solutionSchema.methods.addSolutionForQuestion = async (quesId, solId) => {
-  const question = await questions.findById(quesId);
-  const updatedQuestion = await questions.findByIdAndUpdate(
-    question._id,
-    {
-      solutions: question.solutions.concat(solId),
-    },
-    { new: true }
-  );
-  return updatedQuestion;
+solutionSchema.methods.deleteCommentsAndReplies = async (solution) => {
+  solution.comments.map(async (commentId) => {
+    const comment = await Comments.findById(commentId);
+
+    comment.replies.map(async (replyId) => {
+      await Comments.findByIdAndDelete(replyId);
+    });
+
+    await Comments.findByIdAndDelete(commentId);
+  });
 };
 
 export default mongoose.model("Solutions", solutionSchema);
