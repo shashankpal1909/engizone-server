@@ -7,7 +7,7 @@ const auth = async (req, res, next) => {
     console.log("User Authorized | id :", req.userId);
     next();
   } catch (error) {
-    console.log("Auth-Error :", error);
+    console.log("🚀 ~ file: auth.js ~ line 10 ~ auth ~ error", error);
     res.status(403).json({ message: "Invalid / Expired Credentials" });
   }
 };

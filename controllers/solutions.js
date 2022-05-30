@@ -117,3 +117,25 @@ export const deleteSolutionById = async (req, res) => {
     res.status(500).json({ error: "Something Went Wrong" });
   }
 };
+
+export const updateSolutionById = async (req, res) => {
+  const { id } = req.params;
+  const { text } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) return res.status(404).json({ error: "Invalid Question ID" });
+
+  try {
+    const solution = await Solutions.findById(id);
+    if (!solution) return res.status(404).json({ error: "Invalid Solution ID" });
+
+    if (String(solution.author) !== String(req.userId)) return res.status(403).json({ error: "Unauthorized" });
+
+    solution.text = text;
+    const updatedSolution = await Solutions.findByIdAndUpdate(id, solution, { new: true });
+
+    res.status(200).json({ solution: updatedSolution });
+  } catch (error) {
+    console.log("🚀 ~ file: solutions.js ~ line 138 ~ updateSolutionById ~ error", error);
+    res.status(500).json({ error: "Something Went Wrong" });
+  }
+};

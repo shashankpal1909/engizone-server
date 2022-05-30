@@ -56,7 +56,7 @@ export const addReply = async (req, res) => {
       { new: true }
     );
 
-    res.status(200).json({ comment: updatedComment });
+    res.status(200).json({ comment: updatedComment, reply });
   } catch (error) {
     console.log("🚀 ~ file: comments.js ~ line 61 ~ addReply ~ error", error);
     res.status(500).json({ message: "Something Went Wrong" });
@@ -94,6 +94,48 @@ export const deleteCommentById = async (req, res) => {
     res.status(200).json({ message: "Comment Deleted" });
   } catch (error) {
     console.log("🚀 ~ file: comments.js ~ line 96 ~ deleteCommentById ~ error", error);
+    res.status(500).json({ error: "Something Went Wrong" });
+  }
+};
+
+export const deleteReplyById = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) return res.status(404).json({ error: "Invalid Comment ID" });
+
+  try {
+    const comment = await Comments.findById(id);
+    if (!comment) return res.status(404).json({ error: "Invalid Comment ID" });
+
+    if (String(comment.author) !== String(req.userId)) return res.status(403).json({ error: "Unauthorized" });
+
+    await Comments.findByIdAndDelete(id);
+
+    res.status(200).json({ message: "Comment Deleted" });
+  } catch (error) {
+    console.log("🚀 ~ file: comments.js ~ line 107 ~ deleteReplyById ~ error", error);
+    res.status(500).json({ error: "Something Went Wrong" });
+  }
+};
+
+export const updateCommentById = async (req, res) => {
+  const { id } = req.params;
+  const { text } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) return res.status(404).json({ error: "Invalid Comment ID" });
+
+  try {
+    const comment = await Comments.findById(id);
+    if (!comment) return res.status(404).json({ error: "Invalid Comment ID" });
+
+    if (String(comment.author) !== String(req.userId)) return res.status(403).json({ error: "Unauthorized" });
+
+    comment.text = text;
+    const updatedComment = await Comments.findByIdAndUpdate(id, comment, { new: true });
+
+    res.status(200).json({ comment: updatedComment });
+  } catch (error) {
+    console.log("🚀 ~ file: comments.js ~ line 127 ~ updateCommentById ~ error", error);
     res.status(500).json({ error: "Something Went Wrong" });
   }
 };
