@@ -27,7 +27,8 @@ export const addSolution = async (req, res) => {
 export const getSolutionById = async (req, res) => {
   const { id } = req.params;
 
-  if (!mongoose.Types.ObjectId.isValid(id)) return res.status(404).send("No Solution Found (Invalid ID)");
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).send("No Solution Found (Invalid ID)");
 
   try {
     const solution = await Solutions.findById(id);
@@ -43,7 +44,8 @@ export const voteSolution = async (req, res) => {
   const { id } = req.params;
   const { type } = req.body;
 
-  if (!mongoose.Types.ObjectId.isValid(id)) return res.status(404).send("No Solution Found (Invalid ID)");
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).send("No Solution Found (Invalid ID)");
 
   const solution = await Solutions.findById(id);
 
@@ -52,7 +54,9 @@ export const voteSolution = async (req, res) => {
     else if (type == -1) updateDownVote();
     else return res.status(404).json({ error: "Invalid Vote Type" });
 
-    const updatedSolution = await Solutions.findByIdAndUpdate(solution._id, solution, { new: true });
+    const updatedSolution = await Solutions.findByIdAndUpdate(solution._id, solution, {
+      new: true,
+    });
     res.status(200).json(updatedSolution);
   } catch (error) {
     res.status(500).json({ error: "Something Went Wrong" });
@@ -89,8 +93,10 @@ export const deleteSolutionById = async (req, res) => {
   const { id } = req.params;
   const { questionId } = req.body;
 
-  if (!mongoose.Types.ObjectId.isValid(id)) return res.status(404).json({ error: "Invalid Solution ID" });
-  if (!mongoose.Types.ObjectId.isValid(questionId)) return res.status(404).json({ error: "Invalid Question ID" });
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).json({ error: "Invalid Solution ID" });
+  if (!mongoose.Types.ObjectId.isValid(questionId))
+    return res.status(404).json({ error: "Invalid Question ID" });
 
   try {
     const solution = await Solutions.findById(id);
@@ -99,14 +105,20 @@ export const deleteSolutionById = async (req, res) => {
     const question = await Questions.findById(questionId);
     if (!question) return res.status(404).json({ error: "Invalid Question ID" });
 
-    const solutionIndex = question.solutions.findIndex((solutionId) => String(solutionId) === String(id));
-    if (solutionIndex === -1) return res.status(404).json({ error: "Solution Not Found For This Question" });
+    const solutionIndex = question.solutions.findIndex(
+      (solutionId) => String(solutionId) === String(id)
+    );
+    if (solutionIndex === -1)
+      return res.status(404).json({ error: "Solution Not Found For This Question" });
     else {
-      question.solutions = question.solutions.filter((solutionId) => String(solutionId) !== String(id));
+      question.solutions = question.solutions.filter(
+        (solutionId) => String(solutionId) !== String(id)
+      );
       await Questions.findByIdAndUpdate(questionId, question, { new: true });
     }
 
-    if (String(solution.author) !== String(req.userId)) return res.status(403).json({ error: "Unauthorized" });
+    if (String(solution.author) !== String(req.userId))
+      return res.status(403).json({ error: "Unauthorized" });
 
     await solution.deleteCommentsAndReplies(solution);
     await Solutions.findByIdAndDelete(id);
@@ -122,13 +134,15 @@ export const updateSolutionById = async (req, res) => {
   const { id } = req.params;
   const { text } = req.body;
 
-  if (!mongoose.Types.ObjectId.isValid(id)) return res.status(404).json({ error: "Invalid Question ID" });
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).json({ error: "Invalid Question ID" });
 
   try {
     const solution = await Solutions.findById(id);
     if (!solution) return res.status(404).json({ error: "Invalid Solution ID" });
 
-    if (String(solution.author) !== String(req.userId)) return res.status(403).json({ error: "Unauthorized" });
+    if (String(solution.author) !== String(req.userId))
+      return res.status(403).json({ error: "Unauthorized" });
 
     solution.text = text;
     const updatedSolution = await Solutions.findByIdAndUpdate(id, solution, { new: true });
