@@ -16,7 +16,7 @@ router.post("/sign-in", signIn);
 router.post("/sign-up", signUp);
 
 router.get("/me", auth, getUserDetails);
-router.get("/:id", auth, getUserById);
+router.get("/:id", getUserById);
 
 router.patch("/me", auth, updateUserDetails);
 router.patch("/me/password", auth, updateUserPassword);
