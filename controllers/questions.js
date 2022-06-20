@@ -24,8 +24,44 @@ export const addQuestion = async (req, res) => {
 
 export const getQuestions = async (req, res) => {
   try {
-    const questions = await Questions.find({});
-    res.status(200).json(questions);
+    const count = await Questions.count({});
+    const skip = req.query.skip;
+    const limit = req.query.limit;
+    const questions = await Questions.find({})
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    res.status(200).json({ questions, count });
+  } catch (error) {
+    console.log(
+      "🚀 ~ file: questions.js ~ line 29 ~ getQuestions ~ error",
+      error
+    );
+    res.status(500).json({ message: "Something Went Wrong" });
+  }
+};
+
+export const getQuestionsByQuery = async (req, res) => {
+  try {
+    const skip = req.query.skip;
+    const limit = req.query.limit;
+    const query = req.query.query;
+    const count = await Questions.count({
+      $or: [
+        { text: { $regex: ".*" + query + ".*", $options: "i" } },
+        { title: { $regex: ".*" + query + ".*", $options: "i" } },
+      ],
+    });
+    const questions = await Questions.find({
+      $or: [
+        { text: { $regex: ".*" + query + ".*", $options: "i" } },
+        { title: { $regex: ".*" + query + ".*", $options: "i" } },
+      ],
+    })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    res.status(200).json({ questions, count });
   } catch (error) {
     console.log(
       "🚀 ~ file: questions.js ~ line 29 ~ getQuestions ~ error",
@@ -93,7 +129,7 @@ export const deleteQuestionById = async (req, res) => {
 
 export const updateQuestionById = async (req, res) => {
   const { id } = req.params;
-  const { text } = req.body;
+  const { title, text } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).json({ error: "Invalid Question ID" });
@@ -106,6 +142,7 @@ export const updateQuestionById = async (req, res) => {
     if (String(question.author) !== String(req.userId))
       return res.status(403).json({ error: "Unauthorized" });
 
+    question.title = title;
     question.text = text;
     const updatedQuestion = await Questions.findByIdAndUpdate(id, question, {
       new: true,
