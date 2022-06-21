@@ -7,7 +7,8 @@ export const addComment = async (req, res) => {
   const { solutionId, text } = req.body;
   try {
     const solution = await Solutions.findById(solutionId);
-    if (!solution) return res.status(404).json({ error: "Invalid Solution ID" });
+    if (!solution)
+      return res.status(404).json({ error: "Invalid Solution ID" });
 
     const comment = await Comments.create({ text, author: req.userId });
     const updatedSolution = await Solutions.findByIdAndUpdate(
@@ -31,11 +32,15 @@ export const getCommentById = async (req, res) => {
 
   try {
     const comment = await Comments.findById(id);
-    if (!comment) return res.status(404).json({ error: "No Comment Found (Invalid ID)" });
+    if (!comment)
+      return res.status(404).json({ error: "No Comment Found (Invalid ID)" });
 
     res.status(200).json(comment);
   } catch (error) {
-    console.log("🚀 ~ file: comments.js ~ line 37 ~ getCommentById ~ error", error);
+    console.log(
+      "🚀 ~ file: comments.js ~ line 37 ~ getCommentById ~ error",
+      error
+    );
     res.status(500).json({ error: "Something Went Wrong" });
   }
 };
@@ -49,7 +54,8 @@ export const addReply = async (req, res) => {
 
   try {
     const comment = await Comments.findById(id);
-    if (!comment) return res.status(404).json({ error: "No Comment Found (Invalid ID)" });
+    if (!comment)
+      return res.status(404).json({ error: "No Comment Found (Invalid ID)" });
 
     const reply = await Comments.create({ text, author: req.userId });
     const updatedComment = await Comments.findByIdAndUpdate(
@@ -76,7 +82,8 @@ export const deleteCommentById = async (req, res) => {
 
   try {
     const solution = await Solutions.findById(solutionId);
-    if (!solution) return res.status(404).json({ error: "Invalid Solution ID" });
+    if (!solution)
+      return res.status(404).json({ error: "Invalid Solution ID" });
 
     const comment = await Comments.findById(id);
     if (!comment) return res.status(404).json({ error: "Invalid Comment ID" });
@@ -88,9 +95,13 @@ export const deleteCommentById = async (req, res) => {
       (commentId) => String(commentId) === String(id)
     );
     if (commentIndex === -1)
-      return res.status(404).json({ error: "Comment Not Found For This Question" });
+      return res
+        .status(404)
+        .json({ error: "Comment Not Found For This Question" });
 
-    solution.comments = solution.comments.filter((commentId) => String(commentId) !== String(id));
+    solution.comments = solution.comments.filter(
+      (commentId) => String(commentId) !== String(id)
+    );
     await Solutions.findByIdAndUpdate(solutionId, solution, { new: true });
 
     comment.replies.map(async (replyId) => {
@@ -101,7 +112,10 @@ export const deleteCommentById = async (req, res) => {
 
     res.status(200).json({ message: "Comment Deleted" });
   } catch (error) {
-    console.log("🚀 ~ file: comments.js ~ line 96 ~ deleteCommentById ~ error", error);
+    console.log(
+      "🚀 ~ file: comments.js ~ line 96 ~ deleteCommentById ~ error",
+      error
+    );
     res.status(500).json({ error: "Something Went Wrong" });
   }
 };
@@ -116,6 +130,8 @@ export const deleteReplyById = async (req, res) => {
     const comment = await Comments.findById(id);
     if (!comment) return res.status(404).json({ error: "Invalid Comment ID" });
 
+    // TODO - Remove ReplyID from parent comment
+
     if (String(comment.author) !== String(req.userId))
       return res.status(403).json({ error: "Unauthorized" });
 
@@ -123,7 +139,10 @@ export const deleteReplyById = async (req, res) => {
 
     res.status(200).json({ message: "Comment Deleted" });
   } catch (error) {
-    console.log("🚀 ~ file: comments.js ~ line 107 ~ deleteReplyById ~ error", error);
+    console.log(
+      "🚀 ~ file: comments.js ~ line 107 ~ deleteReplyById ~ error",
+      error
+    );
     res.status(500).json({ error: "Something Went Wrong" });
   }
 };
@@ -143,11 +162,16 @@ export const updateCommentById = async (req, res) => {
       return res.status(403).json({ error: "Unauthorized" });
 
     comment.text = text;
-    const updatedComment = await Comments.findByIdAndUpdate(id, comment, { new: true });
+    const updatedComment = await Comments.findByIdAndUpdate(id, comment, {
+      new: true,
+    });
 
     res.status(200).json({ comment: updatedComment });
   } catch (error) {
-    console.log("🚀 ~ file: comments.js ~ line 127 ~ updateCommentById ~ error", error);
+    console.log(
+      "🚀 ~ file: comments.js ~ line 127 ~ updateCommentById ~ error",
+      error
+    );
     res.status(500).json({ error: "Something Went Wrong" });
   }
 };

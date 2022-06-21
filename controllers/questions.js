@@ -83,11 +83,6 @@ export const getQuestionById = async (req, res) => {
       return res.status(404).json({ error: "No Question Found (Invalid ID)" });
 
     const solutions = await Solutions.find({ _id: question.solutions });
-    console.log(
-      "🚀 ~ file: questions.js ~ line 52 ~ getQuestionById ~ solutions",
-      solutions
-    );
-
     res.status(200).json({ question, solutions });
   } catch (error) {
     console.log(
@@ -129,7 +124,7 @@ export const deleteQuestionById = async (req, res) => {
 
 export const updateQuestionById = async (req, res) => {
   const { id } = req.params;
-  const { title, text } = req.body;
+  const { title, text, tags } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).json({ error: "Invalid Question ID" });
@@ -144,6 +139,7 @@ export const updateQuestionById = async (req, res) => {
 
     question.title = title;
     question.text = text;
+    question.tags = tags;
     const updatedQuestion = await Questions.findByIdAndUpdate(id, question, {
       new: true,
     });
