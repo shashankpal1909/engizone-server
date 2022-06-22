@@ -28,6 +28,8 @@ app.get("/", (req, res) => {
   );
 });
 
+app.use("/images", express.static("images"))
+
 app.use("/users", userRoutes);
 app.use("/questions", questionRoutes);
 app.use("/solutions", solutionRoutes);

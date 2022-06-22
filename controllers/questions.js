@@ -93,6 +93,23 @@ export const getQuestionById = async (req, res) => {
   }
 };
 
+export const getQuestionsByAuthorId = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).send("No Question Found (Invalid ID)");
+
+  try {
+    const questions = await Questions.find({ author: id });
+    res.status(200).json({ questions });
+  } catch (error) {
+    console.log(
+      "🚀 ~ file: questions.js ~ line 100 ~ getQuestionsByAuthorId ~ error",
+      error
+    );
+  }
+};
+
 export const deleteQuestionById = async (req, res) => {
   const { id } = req.params;
 

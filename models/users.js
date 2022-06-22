@@ -10,6 +10,9 @@ const userSchema = mongoose.Schema(
     age: { type: Number },
     phoneNumber: { type: String },
     id: { type: String },
+    avatar: {
+      type: String,
+    },
   },
   { timestamps: true }
 );

@@ -130,7 +130,14 @@ export const deleteReplyById = async (req, res) => {
     const comment = await Comments.findById(id);
     if (!comment) return res.status(404).json({ error: "Invalid Comment ID" });
 
-    // TODO - Remove ReplyID from parent comment
+    let parentComment = await Comments.findOne({ replies: id });
+    parentComment.replies = parentComment.replies.filter(
+      (replyId) => String(replyId) !== String(id)
+    );
+
+    await Comments.findByIdAndUpdate(parentComment._id, parentComment, {
+      new: true,
+    });
 
     if (String(comment.author) !== String(req.userId))
       return res.status(403).json({ error: "Unauthorized" });
