@@ -123,7 +123,7 @@ export const addAvatarById = async (req, res) => {
     // 	.resize(400, 400)
     // 	.toBuffer();
 
-    user.avatar = `http://localhost:5000/images/resized/${id}`;
+    user.avatar = `${process.env.SERVER_BASE_URL}/images/resized/${id}`;
     const updatedUser = await Users.findByIdAndUpdate(id, user, { new: true });
     res.status(200).json({ user: updatedUser });
   } catch (error) {
