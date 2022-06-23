@@ -112,18 +112,18 @@ export const addAvatarById = async (req, res) => {
 
     if (!user) res.status(404).json({ error: "User Not Found" });
 
-    // console.log(req.file, "controllers-users.js");
+    console.log(req.file, "controllers-users.js");
     await sharp(req.file.path)
-      .resize(400, 400)
       .png()
-      .toFile(path.resolve(req.file.destination, "resized", image));
+      .resize(400, 400)
+      .toFile(path.resolve(req.file.destination, "resized", id));
     fs.unlinkSync(req.file.path);
     // const buffer = await sharp(req.file.buffer)
     // 	.png()
     // 	.resize(400, 400)
     // 	.toBuffer();
 
-    user.avatar = `http://localhost:5000/images/resized/${req.userId}.png`;
+    user.avatar = `http://localhost:5000/images/resized/${id}`;
     const updatedUser = await Users.findByIdAndUpdate(id, user, { new: true });
     res.status(200).json({ user: updatedUser });
   } catch (error) {

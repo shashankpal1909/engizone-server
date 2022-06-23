@@ -11,6 +11,7 @@ import {
   getAvatarById,
 } from "../controllers/users.js";
 import auth from "../middleware/auth.js";
+import * as path from "path";
 
 const router = express.Router();
 
@@ -22,7 +23,10 @@ const storage = multer.diskStorage({
     cb(null, "./images");
   },
   filename: function (req, file, cb) {
-    cb(null, req.userId + ".png");
+    cb(
+      null,
+      file.originalname /* req.userId + path.extname(file.originalname) */
+    );
   },
 });
 

@@ -3,6 +3,7 @@ import express from "express";
 import {
   addQuestion,
   deleteQuestionById,
+  getAllTags,
   getQuestionById,
   getQuestions,
   getQuestionsByAuthorId,
@@ -18,6 +19,8 @@ router.post("/", auth, addQuestion);
 router.get("/", getQuestions);
 router.get("/search/", getQuestionsByQuery);
 router.get("/author/:id", getQuestionsByAuthorId);
+
+router.get("/tags", getAllTags);
 
 router.get("/:id", getQuestionById);
 router.patch("/:id", auth, updateQuestionById);

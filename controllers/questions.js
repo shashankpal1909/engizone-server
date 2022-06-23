@@ -22,6 +22,19 @@ export const addQuestion = async (req, res) => {
   }
 };
 
+export const getAllTags = async (req, res) => {
+  try {
+    const tags = await Questions.distinct("tags");
+    res.status(200).json({ tags });
+  } catch (erro̥r) {
+    console.log(
+      "🚀 ~ file: questions.js ~ line 29 ~ getAllTags ~ erro̥r",
+      erro̥r
+    );
+    res.status(500).json({ message: "Something Went Wrong" });
+  }
+};
+
 export const getQuestions = async (req, res) => {
   try {
     const count = await Questions.count({});
@@ -95,12 +108,17 @@ export const getQuestionById = async (req, res) => {
 
 export const getQuestionsByAuthorId = async (req, res) => {
   const { id } = req.params;
+  const limit = req.query.limit;
 
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).send("No Question Found (Invalid ID)");
 
   try {
-    const questions = await Questions.find({ author: id });
+    const questions = await Questions.find({ author: id })
+      .sort({
+        createdAt: -1,
+      })
+      .limit(limit);
     res.status(200).json({ questions });
   } catch (error) {
     console.log(
