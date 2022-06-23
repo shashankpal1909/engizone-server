@@ -9,7 +9,6 @@
 /coverage
 /requests
 /responses
-/images
 
 # production
 /build
