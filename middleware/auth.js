@@ -1,15 +1,23 @@
 import jwt from "jsonwebtoken";
+import chalk from "chalk";
 
-const auth = async (req, res, next) => {
+import User from "../models/users.js";
+
+export default async (req, res, next) => {
   try {
-    const token = req.headers.authorization.split(" ")[1];
-    req.userId = jwt.verify(token, process.env.JWT_SECRET)?.id;
-    console.log("User Authorized | id :", req.userId);
+    const token = req.header("Authorization").replace("Bearer ", "");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findOne({
+      _id: decoded._id,
+      "tokens.token": token,
+    });
+    if (!user) throw new Error();
+    req.user = user;
+    req.token = token;
+    console.log(chalk.greenBright(`[LOGGER] [${user._id}] Auth Success`));
     next();
   } catch (error) {
-    console.log("🚀 ~ file: auth.js ~ line 10 ~ auth ~ error", error);
-    res.status(403).json({ message: "Invalid / Expired Credentials" });
+    console.log(chalk.redBright(`[LOGGER] Auth Failed`));
+    res.status(401).send({ error: "Invalid/Expired Credentials" });
   }
 };
-
-export default auth;

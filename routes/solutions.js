@@ -12,9 +12,7 @@ import auth from "../middleware/auth.js";
 const router = express.Router();
 
 router.post("/", auth, addSolution);
-
 router.post("/:id/vote", auth, voteSolution);
-
 router.get("/:id", getSolutionById);
 router.patch("/:id", auth, updateSolutionById);
 router.delete("/:id", auth, deleteSolutionById);
