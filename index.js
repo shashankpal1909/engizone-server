@@ -9,6 +9,7 @@ import userRoutes from "./routes/users.js";
 import questionRoutes from "./routes/questions.js";
 import solutionRoutes from "./routes/solutions.js";
 import commentsRoutes from "./routes/comments.js";
+import messagesRoutes from "./routes/messages.js";
 
 dotenv.config();
 
@@ -28,12 +29,13 @@ app.get("/", (req, res) => {
   );
 });
 
-app.use("/images", express.static("images"))
+app.use("/images", express.static("images"));
 
 app.use("/users", userRoutes);
 app.use("/questions", questionRoutes);
 app.use("/solutions", solutionRoutes);
 app.use("/comments", commentsRoutes);
+app.use("/messages", messagesRoutes);
 
 const PORT = process.env.PORT;
 

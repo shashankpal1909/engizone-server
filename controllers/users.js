@@ -26,6 +26,28 @@ export const signUp = async (req, res) => {
   }
 };
 
+export const signOut = async (req, res) => {
+  try {
+    req.user.tokens = req.user.tokens.filter((token) => {
+      return token.token !== req.token;
+    });
+    await req.user.save();
+    res.status(200).json({ message: "Successfully Logged Out!" });
+  } catch (error) {
+    res.status(500).send();
+  }
+};
+
+export const signOutAll = async (req, res) => {
+  try {
+    req.user.tokens = [];
+    await req.user.save();
+    res.send("Successfully logged out of all sessions!");
+  } catch (error) {
+    res.status(500).send();
+  }
+};
+
 export const getUserById = async (req, res) => {
   const { id } = req.params;
 

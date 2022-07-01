@@ -153,6 +153,55 @@ export const getQuestionsByAuthorId = async (req, res) => {
   }
 };
 
+export const getBookmarkedQuestionsByUserId = async (req, res) => {
+  const { id } = req.params;
+  const limit = req.query.limit;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).json({ error: "No Question Found (Invalid ID)" });
+
+  try {
+    const user = await User.findById(id);
+
+    if (!user)
+      return res.status(404).json({ error: "No User Found (Invalid ID)" });
+
+    const questions = await Question.find({ bookmarks: String(id) }).limit(
+      limit
+    );
+
+    res.status(200).json({ questions });
+  } catch (error) {
+    res.status(500).json({ error: "Something Went Wrong" });
+  }
+};
+
+export const toggleBookMark = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).json({ error: "No Question Found (Invalid ID)" });
+
+  try {
+    const question = await Question.findById(id);
+
+    if (!question)
+      return res.status(404).json({ error: "No Question Found (Invalid ID)" });
+
+    if (question.bookmarks.includes(String(req.user._id)))
+      question.bookmarks = question.bookmarks.filter(
+        (id) => String(id) !== String(req.user._id)
+      );
+    else question.bookmarks = question.bookmarks.concat(req.user._id);
+
+    await question.save();
+    res.status(200).json({ message: "Bookmark Toggled" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Something Went Wrong" });
+  }
+};
+
 export const updateQuestionById = async (req, res) => {
   const { id } = req.params;
 

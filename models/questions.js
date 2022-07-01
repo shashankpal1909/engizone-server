@@ -11,6 +11,11 @@ const questionSchema = mongoose.Schema(
       required: true,
       ref: "User",
     },
+    bookmarks: {
+      type: [mongoose.Schema.Types.ObjectId],
+      // default: [],
+      ref: "User",
+    },
     // solutions: {
     //   type: [mongoose.Schema.Types.ObjectId],
     //   default: [],
