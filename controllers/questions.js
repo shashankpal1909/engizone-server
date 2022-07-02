@@ -1,85 +1,90 @@
 import mongoose from "mongoose";
 
-import Questions from "../models/questions.js";
-import Solutions from "../models/solutions.js";
+import Question from "../models/questions.js";
+import User from "../models/users.js";
 
 export const addQuestion = async (req, res) => {
   const { title, text, tags } = req.body;
   try {
-    const question = await Questions.create({
+    const question = new Question({
       title,
       text,
       tags,
-      author: req.userId,
+      author: req.user._id,
     });
-    res.status(200).json({ question });
+    await question.save();
+    await question.populate([
+      { path: "author", select: "-email -phoneNumber -age" },
+      {
+        path: "solutions",
+        populate: [
+          { path: "author", select: "-email -phoneNumber -age" },
+          {
+            path: "comments",
+            populate: [
+              {
+                path: "replies",
+                populate: {
+                  path: "author",
+                  select: "-email -phoneNumber -age",
+                },
+              },
+              {
+                path: "author",
+                select: "-email -phoneNumber -age",
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    res.status(201).json({ question });
   } catch (error) {
-    console.log(
-      "🚀 ~ file: questions.js ~ line 12 ~ addQuestion ~ error",
-      error
-    );
     res.status(500).json({ message: "Something Went Wrong" });
   }
 };
 
 export const getAllTags = async (req, res) => {
   try {
-    const tags = await Questions.distinct("tags");
+    const tags = await Question.distinct("tags");
     res.status(200).json({ tags });
-  } catch (erro̥r) {
-    console.log(
-      "🚀 ~ file: questions.js ~ line 29 ~ getAllTags ~ erro̥r",
-      erro̥r
-    );
+  } catch (error) {
     res.status(500).json({ message: "Something Went Wrong" });
   }
 };
 
 export const getQuestions = async (req, res) => {
   try {
-    const count = await Questions.count({});
-    const skip = req.query.skip;
-    const limit = req.query.limit;
-    const questions = await Questions.find({})
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-    res.status(200).json({ questions, count });
-  } catch (error) {
-    console.log(
-      "🚀 ~ file: questions.js ~ line 29 ~ getQuestions ~ error",
-      error
-    );
-    res.status(500).json({ message: "Something Went Wrong" });
-  }
-};
+    const filter = {};
 
-export const getQuestionsByQuery = async (req, res) => {
-  try {
     const skip = req.query.skip;
     const limit = req.query.limit;
-    const query = req.query.query;
-    const count = await Questions.count({
-      $or: [
-        { text: { $regex: ".*" + query + ".*", $options: "i" } },
-        { title: { $regex: ".*" + query + ".*", $options: "i" } },
-      ],
-    });
-    const questions = await Questions.find({
-      $or: [
-        { text: { $regex: ".*" + query + ".*", $options: "i" } },
-        { title: { $regex: ".*" + query + ".*", $options: "i" } },
-      ],
-    })
+    const search = req.query.search;
+
+    if (search)
+      filter.$or = [
+        { text: { $regex: ".*" + search + ".*", $options: "i" } },
+        { title: { $regex: ".*" + search + ".*", $options: "i" } },
+      ];
+
+    const count = await Question.count(filter);
+    const questions = await Question.find(filter)
+      .populate([
+        {
+          path: "author",
+          select: "-email -phoneNumber -age",
+        },
+        {
+          path: "solutionCount",
+        },
+      ])
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
+
     res.status(200).json({ questions, count });
   } catch (error) {
-    console.log(
-      "🚀 ~ file: questions.js ~ line 29 ~ getQuestions ~ error",
-      error
-    );
     res.status(500).json({ message: "Something Went Wrong" });
   }
 };
@@ -88,20 +93,40 @@ export const getQuestionById = async (req, res) => {
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).send("No Question Found (Invalid ID)");
+    return res.status(404).json({ error: "No Question Found (Invalid ID)" });
 
   try {
-    let question = await Questions.findById(id);
+    const question = await Question.findById(id).populate([
+      { path: "author", select: "-email -phoneNumber -age" },
+      {
+        path: "solutions",
+        populate: [
+          { path: "author", select: "-email -phoneNumber -age" },
+          {
+            path: "comments",
+            populate: [
+              {
+                path: "replies",
+                populate: {
+                  path: "author",
+                  select: "-email -phoneNumber -age",
+                },
+              },
+              {
+                path: "author",
+                select: "-email -phoneNumber -age",
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
     if (!question)
       return res.status(404).json({ error: "No Question Found (Invalid ID)" });
 
-    const solutions = await Solutions.find({ _id: question.solutions });
-    res.status(200).json({ question, solutions });
+    res.status(200).json({ question });
   } catch (error) {
-    console.log(
-      "🚀 ~ file: questions.js ~ line 27 ~ getQuestionById ~ error",
-      error
-    );
     res.status(500).json({ message: "Something Went Wrong" });
   }
 };
@@ -111,20 +136,104 @@ export const getQuestionsByAuthorId = async (req, res) => {
   const limit = req.query.limit;
 
   if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).send("No Question Found (Invalid ID)");
+    return res.status(404).json({ error: "No Question Found (Invalid ID)" });
 
   try {
-    const questions = await Questions.find({ author: id })
-      .sort({
-        createdAt: -1,
-      })
-      .limit(limit);
+    const user = await User.findById(id).populate({
+      path: "questions",
+      options: { limit, sort: { createdAt: -1 } },
+    });
+
+    if (!user)
+      return res.status(404).json({ error: "No User Found (Invalid ID)" });
+
+    res.status(200).json({ questions: user.questions });
+  } catch (error) {
+    res.status(500).json({ error: "Something Went Wrong" });
+  }
+};
+
+export const getBookmarkedQuestionsByUserId = async (req, res) => {
+  const { id } = req.params;
+  const limit = req.query.limit;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).json({ error: "No Question Found (Invalid ID)" });
+
+  try {
+    const user = await User.findById(id);
+
+    if (!user)
+      return res.status(404).json({ error: "No User Found (Invalid ID)" });
+
+    const questions = await Question.find({ bookmarks: String(id) }).limit(
+      limit
+    );
+
     res.status(200).json({ questions });
   } catch (error) {
-    console.log(
-      "🚀 ~ file: questions.js ~ line 100 ~ getQuestionsByAuthorId ~ error",
-      error
-    );
+    res.status(500).json({ error: "Something Went Wrong" });
+  }
+};
+
+export const toggleBookMark = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).json({ error: "No Question Found (Invalid ID)" });
+
+  try {
+    const question = await Question.findById(id);
+
+    if (!question)
+      return res.status(404).json({ error: "No Question Found (Invalid ID)" });
+
+    if (question.bookmarks.includes(String(req.user._id)))
+      question.bookmarks = question.bookmarks.filter(
+        (id) => String(id) !== String(req.user._id)
+      );
+    else question.bookmarks = question.bookmarks.concat(req.user._id);
+
+    await question.save();
+    res.status(200).json({ message: "Bookmark Toggled" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Something Went Wrong" });
+  }
+};
+
+export const updateQuestionById = async (req, res) => {
+  const { id } = req.params;
+
+  const updates = Object.keys(req.body);
+  const allowedUpdates = ["title", "text", "tags"];
+
+  const isValidOperation = updates.every((update) =>
+    allowedUpdates.includes(update)
+  );
+
+  if (!isValidOperation)
+    return res.status(400).json({ error: "Invalid Updates" });
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).json({ error: "No Question Found (Invalid ID)" });
+
+  try {
+    const question = await Question.findById(id);
+
+    if (!question)
+      return res.status(404).json({ error: "No Question Found (Invalid ID)" });
+
+    if (String(question.author) !== String(req.user._id))
+      return res.status(403).json({ error: "Unauthorized" });
+
+    updates.forEach((update) => (question[update] = req.body[update]));
+
+    await question.save();
+
+    res.status(200).json({ question });
+  } catch (error) {
+    res.status(500).json({ error: "Something Went Wrong" });
   }
 };
 
@@ -132,59 +241,18 @@ export const deleteQuestionById = async (req, res) => {
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).json({ error: "Invalid Question ID" });
+    return res.status(404).json({ error: "No Question Found (Invalid ID)" });
 
   try {
-    const question = await Questions.findById(id);
+    const question = await Question.findById(id);
+
     if (!question)
-      return res.status(404).json({ error: "Invalid Question ID" });
+      return res.status(404).json({ error: "No Question Found (Invalid ID)" });
 
-    question.solutions.map(async (solutionId) => {
-      const solution = await Solutions.findById(solutionId);
-      await solution.deleteCommentsAndReplies(solution);
-      await Solutions.findByIdAndDelete(solution._id);
-    });
-
-    await Questions.findByIdAndDelete(id);
+    await question.remove();
 
     res.status(200).json({ message: "Question Deleted" });
   } catch (error) {
-    console.log(
-      "🚀 ~ file: questions.js ~ line 51 ~ deleteQuestionById ~ error",
-      error
-    );
-    res.status(500).json({ error: "Something Went Wrong" });
-  }
-};
-
-export const updateQuestionById = async (req, res) => {
-  const { id } = req.params;
-  const { title, text, tags } = req.body;
-
-  if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).json({ error: "Invalid Question ID" });
-
-  try {
-    const question = await Questions.findById(id);
-    if (!question)
-      return res.status(404).json({ error: "Invalid Question ID" });
-
-    if (String(question.author) !== String(req.userId))
-      return res.status(403).json({ error: "Unauthorized" });
-
-    question.title = title;
-    question.text = text;
-    question.tags = tags;
-    const updatedQuestion = await Questions.findByIdAndUpdate(id, question, {
-      new: true,
-    });
-
-    res.status(200).json({ question: updatedQuestion });
-  } catch (error) {
-    console.log(
-      "🚀 ~ file: questions.js ~ line 74 ~ updateQuestionById ~ error",
-      error
-    );
     res.status(500).json({ error: "Something Went Wrong" });
   }
 };

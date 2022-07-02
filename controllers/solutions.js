@@ -1,25 +1,45 @@
 import mongoose from "mongoose";
 
-import Questions from "../models/questions.js";
-import Solutions from "../models/solutions.js";
+import Question from "../models/questions.js";
+import Solution from "../models/solutions.js";
 
 export const addSolution = async (req, res) => {
   const { text, questionId } = req.body;
+
   try {
-    const question = await Questions.findById(questionId);
-    if (!question) return res.status(404).json({ error: "Invalid Question ID" });
+    const question = await Question.findById(questionId);
+    if (!question)
+      return res.status(404).json({ error: "No Question Found (Invalid ID)" });
 
-    const solution = await Solutions.create({ text, author: req.userId });
+    const solution = new Solution({
+      text,
+      author: req.user._id,
+      questionId,
+    });
 
-    const updatedQuestion = await Questions.findByIdAndUpdate(
-      question._id,
-      { solutions: question.solutions.concat(solution._id) },
-      { new: true }
-    );
+    await solution.save();
+    await solution.populate([
+      { path: "author", select: "-email -phoneNumber -age" },
+      {
+        path: "comments",
+        populate: [
+          {
+            path: "replies",
+            populate: {
+              path: "author",
+              select: "-email -phoneNumber -age",
+            },
+          },
+          {
+            path: "author",
+            select: "-email -phoneNumber -age",
+          },
+        ],
+      },
+    ]);
 
-    res.status(200).json({ question: updatedQuestion, solution });
+    res.status(200).json({ solution });
   } catch (error) {
-    console.log("🚀 ~ file: solutions.js ~ line 22 ~ addSolution ~ error", error);
     res.status(500).json({ error: "Something Went Wrong" });
   }
 };
@@ -28,13 +48,34 @@ export const getSolutionById = async (req, res) => {
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).send("No Solution Found (Invalid ID)");
+    return res.status(404).json({ error: "No Solution Found (Invalid ID)" });
 
   try {
-    const solution = await Solutions.findById(id);
-    if (!solution) return res.status(404).send("No Solution Found (Invalid ID)");
+    const solution = await Solution.findById(id);
+    if (!solution)
+      return res.status(404).json({ error: "No Solution Found (Invalid ID)" });
 
-    res.status(200).json(solution);
+    await solution.populate([
+      { path: "author", select: "-email -phoneNumber -age" },
+      {
+        path: "comments",
+        populate: [
+          {
+            path: "replies",
+            populate: {
+              path: "author",
+              select: "-email -phoneNumber -age",
+            },
+          },
+          {
+            path: "author",
+            select: "-email -phoneNumber -age",
+          },
+        ],
+      },
+    ]);
+
+    res.status(200).json({ solution });
   } catch (error) {
     res.status(500).json({ error: "Something Went Wrong" });
   }
@@ -45,111 +86,156 @@ export const voteSolution = async (req, res) => {
   const { type } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).send("No Solution Found (Invalid ID)");
-
-  const solution = await Solutions.findById(id);
+    return res.status(404).json({ error: "No Solution Found (Invalid ID)" });
 
   try {
-    if (type === 1) updateUpVote();
-    else if (type == -1) updateDownVote();
+    const solution = await Solution.findById(id);
+
+    if (!solution)
+      return res.status(404).json({ error: "No Solution Found (Invalid ID)" });
+
+    if (type === 1) updateUpVote(solution);
+    else if (type == -1) updateDownVote(solution);
     else return res.status(404).json({ error: "Invalid Vote Type" });
 
-    const updatedSolution = await Solutions.findByIdAndUpdate(solution._id, solution, {
-      new: true,
-    });
-    res.status(200).json(updatedSolution);
+    await solution.save();
+    await solution.populate([
+      { path: "author", select: "-email -phoneNumber -age" },
+      {
+        path: "comments",
+        populate: [
+          {
+            path: "replies",
+            populate: {
+              path: "author",
+              select: "-email -phoneNumber -age",
+            },
+          },
+          {
+            path: "author",
+            select: "-email -phoneNumber -age",
+          },
+        ],
+      },
+    ]);
+
+    res.status(200).json({ solution });
   } catch (error) {
     res.status(500).json({ error: "Something Went Wrong" });
   }
 
-  function updateDownVote() {
-    const index = solution.downVotes.findIndex((id) => String(id) === String(req.userId));
-
-    if (index === -1) solution.downVotes.push(req.userId);
-    else solution.downVotes = solution.downVotes.filter((id) => String(id) !== String(req.userId));
-
-    toggleUpVote();
-  }
-
-  function updateUpVote() {
-    const index = solution.upVotes.findIndex((id) => String(id) === String(req.userId));
-
-    if (index === -1) solution.upVotes.push(req.userId);
-    else solution.upVotes = solution.upVotes.filter((id) => String(id) !== String(req.userId));
-
-    toggleDownVote();
-  }
-
-  function toggleUpVote() {
-    solution.upVotes = solution.upVotes.filter((id) => String(id) !== String(req.userId));
-  }
-
-  function toggleDownVote() {
-    solution.downVotes = solution.downVotes.filter((id) => String(id) !== String(req.userId));
-  }
-};
-
-export const deleteSolutionById = async (req, res) => {
-  const { id } = req.params;
-  const { questionId } = req.body;
-
-  if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).json({ error: "Invalid Solution ID" });
-  if (!mongoose.Types.ObjectId.isValid(questionId))
-    return res.status(404).json({ error: "Invalid Question ID" });
-
-  try {
-    const solution = await Solutions.findById(id);
-    if (!solution) return res.status(404).json({ error: "Invalid Solution ID" });
-
-    const question = await Questions.findById(questionId);
-    if (!question) return res.status(404).json({ error: "Invalid Question ID" });
-
-    const solutionIndex = question.solutions.findIndex(
-      (solutionId) => String(solutionId) === String(id)
+  function updateDownVote(solution) {
+    const index = solution.downVotes.findIndex(
+      (id) => String(id) === String(req.user._id)
     );
-    if (solutionIndex === -1)
-      return res.status(404).json({ error: "Solution Not Found For This Question" });
-    else {
-      question.solutions = question.solutions.filter(
-        (solutionId) => String(solutionId) !== String(id)
+
+    if (index === -1) solution.downVotes.push(req.user._id);
+    else
+      solution.downVotes = solution.downVotes.filter(
+        (id) => String(id) !== String(req.user._id)
       );
-      await Questions.findByIdAndUpdate(questionId, question, { new: true });
-    }
 
-    if (String(solution.author) !== String(req.userId))
-      return res.status(403).json({ error: "Unauthorized" });
+    toggleUpVote(solution);
+  }
 
-    await solution.deleteCommentsAndReplies(solution);
-    await Solutions.findByIdAndDelete(id);
+  function updateUpVote(solution) {
+    const index = solution.upVotes.findIndex(
+      (id) => String(id) === String(req.user._id)
+    );
 
-    res.status(200).json({ message: "Solution Deleted" });
-  } catch (error) {
-    console.log("🚀 ~ file: solutions.js ~ line 177 ~ deleteSolutionById ~ error", error);
-    res.status(500).json({ error: "Something Went Wrong" });
+    if (index === -1) solution.upVotes.push(req.user._id);
+    else
+      solution.upVotes = solution.upVotes.filter(
+        (id) => String(id) !== String(req.user._id)
+      );
+
+    toggleDownVote(solution);
+  }
+
+  function toggleUpVote(solution) {
+    solution.upVotes = solution.upVotes.filter(
+      (id) => String(id) !== String(req.user._id)
+    );
+  }
+
+  function toggleDownVote(solution) {
+    solution.downVotes = solution.downVotes.filter(
+      (id) => String(id) !== String(req.user._id)
+    );
   }
 };
 
 export const updateSolutionById = async (req, res) => {
   const { id } = req.params;
-  const { text } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).json({ error: "Invalid Question ID" });
+    return res.status(404).json({ error: "No Solution Found (Invalid ID)" });
+
+  const updates = Object.keys(req.body);
+  const allowedUpdates = ["text"];
+
+  const isValidOperation = updates.every((update) =>
+    allowedUpdates.includes(update)
+  );
+
+  if (!isValidOperation)
+    return res.status(400).json({ error: "Invalid Updates" });
 
   try {
-    const solution = await Solutions.findById(id);
-    if (!solution) return res.status(404).json({ error: "Invalid Solution ID" });
+    const solution = await Solution.findById(id);
+    if (!solution)
+      return res.status(404).json({ error: "No Solution Found (Invalid ID)" });
 
-    if (String(solution.author) !== String(req.userId))
+    if (String(solution.author) !== String(req.user._id))
       return res.status(403).json({ error: "Unauthorized" });
 
-    solution.text = text;
-    const updatedSolution = await Solutions.findByIdAndUpdate(id, solution, { new: true });
+    updates.forEach((update) => (solution[update] = req.body[update]));
 
-    res.status(200).json({ solution: updatedSolution });
+    await solution.save();
+    await solution.populate([
+      { path: "author", select: "-email -phoneNumber -age" },
+      {
+        path: "comments",
+        populate: [
+          {
+            path: "replies",
+            populate: {
+              path: "author",
+              select: "-email -phoneNumber -age",
+            },
+          },
+          {
+            path: "author",
+            select: "-email -phoneNumber -age",
+          },
+        ],
+      },
+    ]);
+
+    res.status(200).json({ solution });
   } catch (error) {
-    console.log("🚀 ~ file: solutions.js ~ line 138 ~ updateSolutionById ~ error", error);
+    res.status(500).json({ error: "Something Went Wrong" });
+  }
+};
+
+export const deleteSolutionById = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).json({ error: "No Solution Found (Invalid ID)" });
+
+  try {
+    const solution = await Solution.findById(id);
+    if (!solution)
+      return res.status(404).json({ error: "No Solution Found (Invalid ID)" });
+
+    if (String(solution.author) !== String(req.user._id))
+      return res.status(403).json({ error: "Unauthorized" });
+
+    await solution.remove();
+
+    res.status(200).json({ message: "Solution Deleted" });
+  } catch (error) {
     res.status(500).json({ error: "Something Went Wrong" });
   }
 };
